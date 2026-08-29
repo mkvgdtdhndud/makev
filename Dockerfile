@@ -26,9 +26,12 @@ RUN apk --no-cache --update add \
 COPY . .
 COPY --from=frontend /src/internal/web/dist ./internal/web/dist
 
-# دانلود و کامپایل دقیق فایل اجرایی سایفون
+# دانلود و کامپایل هسته سایفون
 RUN CGO_ENABLED=0 go install github.com/Psiphon-Labs/psiphon-tunnel-core/ConsoleClient@latest && \
     mv /go/bin/ConsoleClient /go/bin/psiphon
+
+# کلون کردن دیتابیس سرورهای اولیه سایفون
+RUN git clone https://github.com/thispc/psiphon.git /app/psiphon-src
 
 ENV CGO_ENABLED=1
 ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
@@ -36,18 +39,13 @@ RUN go build -ldflags "-w -s" -o build/x-ui main.go
 RUN ./DockerInit.sh "$TARGETARCH"
 
 # ========================================================
-# Stage: Final Image of 3x-ui (Tor + Psiphon)
+# Stage: Final Image of 3x-ui (Tor + Psiphon Activated)
 # ========================================================
 FROM alpine
 ENV TZ=Asia/Tehran
 WORKDIR /app
 
-
-# کلون کردن پروژه جهت دسترسی به سرورهای اولیه سایفون
-RUN git clone https://github.com/thispc/psiphon.git /app/psiphon-src
-
-
-# نصب پیش‌نیازها
+# نصب ابزارهای مورد نیاز
 RUN apk add --no-cache --update \
   ca-certificates \
   tzdata \
@@ -60,8 +58,8 @@ RUN apk add --no-cache --update \
   sudo \
   socat
 
-# ساخت پوشه‌های کاری Tor و Psiphon
-RUN mkdir -p /etc/tor/t_sin_nodes /var/lib/tor/t_sin_nodes /etc/psiphon /var/lib/psiphon && \
+# ساخت پوشه‌های کاری
+RUN mkdir -p /etc/tor/t_sin_nodes /var/lib/tor/t_sin_nodes /etc/psiphon /var/lib/psiphon /app/psiphon-src && \
     chown -R tor:tor /var/lib/tor/t_sin_nodes /etc/tor/t_sin_nodes
 
 COPY --from=builder /app/build/ /app/
@@ -69,10 +67,11 @@ COPY --from=builder /app/DockerEntrypoint.sh /app/
 COPY --from=builder /app/x-ui.sh /usr/bin/x-ui
 COPY --from=builder /app/internal/web/translation /app/internal/web/translation
 
-# کپی کردن فایل اجرایی سایفون اصلاح‌شده
+# کپی کردن باینری و لیست سرورهای سایفون
 COPY --from=builder /go/bin/psiphon /usr/bin/psiphon-tunnel-core
+COPY --from=builder /app/psiphon-src /app/psiphon-src
 
-# کپی کردن اسکریپت راه‌انداز
+# کپی اسکریپت راه‌انداز
 COPY entrypoint.sh /app/entrypoint.sh
 
 # Configure fail2ban
