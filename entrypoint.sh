@@ -4,14 +4,16 @@ set -e
 echo "[*] Starting Smart Hybrid Routing Engine (Tor + Psiphon)..."
 
 # ========================================================
-# 1. راه‌اندازی نودهای Tor (پورت‌های 9080 تا 9088)
+# 1. اجرای Tor (ایتالیا، نروژ، دانمارک)
 # ========================================================
 BASE_DIR_TOR="/etc/tor/t_sin_nodes"
 DATA_DIR_TOR="/var/lib/tor/t_sin_nodes"
 TOR_USER="tor"
 
 declare -A TOR_NODES=(
-    ["DK"]="9099" ["IT"]="9089" ["NO"]="9098"
+    ["IT"]="9089"
+    ["NO"]="9098"
+    ["DK"]="9099"
 )
 
 for code in "${!TOR_NODES[@]}"; do
@@ -58,7 +60,7 @@ EOF
 done
 
 # ========================================================
-# 2. راه‌اندازی نودهای سایفون (پورت‌های 9100 تا 9108)
+# 2. اجرای سایفون (دانمارک، ایتالیا، نروژ)
 # ========================================================
 if command -v psiphon-tunnel-core &> /dev/null; then
     echo "[*] Launching Psiphon Engine..."
@@ -66,7 +68,9 @@ if command -v psiphon-tunnel-core &> /dev/null; then
     DATA_DIR_PSI="/var/lib/psiphon"
 
     declare -A PSI_NODES=(
-        ["DK"]="9100" ["IT"]="9101" ["NO"]="9102"
+        ["DK"]="9100"
+        ["IT"]="9101"
+        ["NO"]="9102"
     )
 
     for code in "${!PSI_NODES[@]}"; do
@@ -92,6 +96,6 @@ else
 fi
 
 # ========================================================
-# 3. اجرای ورودی اصلی داکر پنل
+# 3. اجرای ورودی اصلی پنل
 # ========================================================
 exec /app/DockerEntrypoint.sh "$@"
