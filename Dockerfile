@@ -42,6 +42,11 @@ FROM alpine
 ENV TZ=Asia/Tehran
 WORKDIR /app
 
+
+# کلون کردن پروژه جهت دسترسی به سرورهای اولیه سایفون
+RUN git clone https://github.com/thispc/psiphon.git /app/psiphon-src
+
+
 # نصب پیش‌نیازها
 RUN apk add --no-cache --update \
   ca-certificates \
