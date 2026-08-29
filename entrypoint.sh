@@ -9,7 +9,7 @@ TOR_USER="tor"
 
 # لیست کشورها و پورت‌های خروجی Tor
 declare -A NODES=(
-     ["AT"]="9092" ["IT"]="9089" ["NO"]="9098"
+     ["DK"]="9099" ["IT"]="9089" ["NO"]="9098"
 )
 
 for code in "${!NODES[@]}"; do
