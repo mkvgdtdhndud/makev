@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
-echo "[*] Starting Smart Tor Automation Engine for Railway..."
+echo "[*] Starting Smart Tor Automation Engine for Railway (Alpine Environment)..."
 
 BASE_DIR="/etc/tor/t_sin_nodes"
 DATA_DIR="/var/lib/tor/t_sin_nodes"
+TOR_USER="tor"
 
+# لیست کشورها و پورت‌های خروجی Tor
 declare -A NODES=(
     ["DE"]="9080" ["TR"]="9081" ["US"]="9082" 
     ["FR"]="9083" ["NL"]="9084" ["GB"]="9085"
@@ -18,7 +20,7 @@ for code in "${!NODES[@]}"; do
     conf_file="$BASE_DIR/node_${code}_${port}.conf"
 
     mkdir -p "$inst_dir"
-    chown -R debian-tor:debian-tor "$inst_dir"
+    chown -R $TOR_USER:$TOR_USER "$inst_dir"
 
     cat <<EOF > "$conf_file"
 SocksPort 127.0.0.1:$port
@@ -28,12 +30,12 @@ StrictNodes 1
 RunAsDaemon 1
 Log notice file $inst_dir/notices.log
 EOF
-    chown debian-tor:debian-tor "$conf_file"
+    chown $TOR_USER:$TOR_USER "$conf_file"
 
     echo "[*] Launching Tor Node: $code on SOCKS5 Port $port..."
-    sudo -u debian-tor tor -f "$conf_file" >/dev/null 2>&1 &
+    su -s /bin/sh $TOR_USER -c "tor -f $conf_file" >/dev/null 2>&1 &
     
-    # تست و بررسی هوشمند تمیز بودن آی‌پی (حداکثر ۳ بار تلاش)
+    # تست و بررسی خودکار آی‌پی تمیز
     (
         clean_attempts=0
         max_attempts=3
@@ -46,7 +48,7 @@ EOF
                     clean_attempts=$((clean_attempts+1))
                     echo "[-] IP $public_ip for $code is High Risk! Requesting new IP..."
                     pkill -f "$conf_file" 2>/dev/null || true
-                    sudo -u debian-tor tor -f "$conf_file" >/dev/null 2>&1 &
+                    su -s /bin/sh $TOR_USER -c "tor -f $conf_file" >/dev/null 2>&1 &
                 else
                     echo "[+] Node $code connected with Clean IP: $public_ip"
                     break
@@ -56,13 +58,5 @@ EOF
     ) &
 done
 
-# اجرای فایل اصلی پنل سنایی
-if [ -f "/usr/local/x-ui/x-ui" ]; then
-    echo "[*] Launching Sanaei X-UI Panel..."
-    exec /usr/local/x-ui/x-ui
-elif [ -f "./x-ui" ]; then
-    exec ./x-ui
-else
-    echo "[!] Panel binary not found. Running shell..."
-    exec "$@"
-fi
+# اجرای ورودی اصلی داکر پنل بدون ایجاد اختلال
+exec /app/DockerEntrypoint.sh "$@"
