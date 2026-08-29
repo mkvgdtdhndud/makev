@@ -20,10 +20,14 @@ RUN apk --no-cache --update add \
   build-base \
   gcc \
   curl \
-  unzip
+  unzip \
+  git
 
 COPY . .
 COPY --from=frontend /src/internal/web/dist ./internal/web/dist
+
+# دانلود باینری کامپایل‌شده Psiphon برای لینوکس
+RUN CGO_ENABLED=0 go install github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon@latest || true
 
 ENV CGO_ENABLED=1
 ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
@@ -31,13 +35,13 @@ RUN go build -ldflags "-w -s" -o build/x-ui main.go
 RUN ./DockerInit.sh "$TARGETARCH"
 
 # ========================================================
-# Stage: Final Image of 3x-ui (با پشتیبانی از Tor)
+# Stage: Final Image of 3x-ui (با پشتیبانی همزمان Tor و Psiphon)
 # ========================================================
 FROM alpine
 ENV TZ=Asia/Tehran
 WORKDIR /app
 
-# نصب ابزارهای اصلی پنل + پکیج‌های اختصاصی Tor
+# نصب ابزارهای اصلی + Tor + پیش‌نیازهای سایفون
 RUN apk add --no-cache --update \
   ca-certificates \
   tzdata \
@@ -50,8 +54,8 @@ RUN apk add --no-cache --update \
   sudo \
   socat
 
-# ساخت پوشه‌های کاری Tor برای Alpine
-RUN mkdir -p /etc/tor/t_sin_nodes /var/lib/tor/t_sin_nodes && \
+# ساخت پوشه‌های کاری Tor و Psiphon
+RUN mkdir -p /etc/tor/t_sin_nodes /var/lib/tor/t_sin_nodes /etc/psiphon /var/lib/psiphon && \
     chown -R tor:tor /var/lib/tor/t_sin_nodes /etc/tor/t_sin_nodes
 
 COPY --from=builder /app/build/ /app/
@@ -59,7 +63,10 @@ COPY --from=builder /app/DockerEntrypoint.sh /app/
 COPY --from=builder /app/x-ui.sh /usr/bin/x-ui
 COPY --from=builder /app/internal/web/translation /app/internal/web/translation
 
-# کپی کردن اسکریپت جدید راه‌انداز Tor
+# کپی کردن فایل اجرایی سایفون
+COPY --from=builder /go/bin/psiphon /usr/bin/psiphon-tunnel-core
+
+# کپی کردن اسکریپت جدید راه‌انداز
 COPY entrypoint.sh /app/entrypoint.sh
 
 # Configure fail2ban
@@ -73,7 +80,8 @@ RUN chmod +x \
   /app/DockerEntrypoint.sh \
   /app/entrypoint.sh \
   /app/x-ui \
-  /usr/bin/x-ui
+  /usr/bin/x-ui \
+  /usr/bin/psiphon-tunnel-core || true
 
 ENV XUI_IN_DOCKER="true"
 ENV XUI_MAIN_FOLDER="/app"
