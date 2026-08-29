@@ -26,8 +26,9 @@ RUN apk --no-cache --update add \
 COPY . .
 COPY --from=frontend /src/internal/web/dist ./internal/web/dist
 
-# دانلود باینری کامپایل‌شده Psiphon برای لینوکس
-RUN CGO_ENABLED=0 go install github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon@latest || true
+# دانلود و کامپایل دقیق فایل اجرایی سایفون
+RUN CGO_ENABLED=0 go install github.com/Psiphon-Labs/psiphon-tunnel-core/ConsoleClient@latest && \
+    mv /go/bin/ConsoleClient /go/bin/psiphon
 
 ENV CGO_ENABLED=1
 ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
@@ -35,13 +36,13 @@ RUN go build -ldflags "-w -s" -o build/x-ui main.go
 RUN ./DockerInit.sh "$TARGETARCH"
 
 # ========================================================
-# Stage: Final Image of 3x-ui (با پشتیبانی همزمان Tor و Psiphon)
+# Stage: Final Image of 3x-ui (Tor + Psiphon)
 # ========================================================
 FROM alpine
 ENV TZ=Asia/Tehran
 WORKDIR /app
 
-# نصب ابزارهای اصلی + Tor + پیش‌نیازهای سایفون
+# نصب پیش‌نیازها
 RUN apk add --no-cache --update \
   ca-certificates \
   tzdata \
@@ -63,10 +64,10 @@ COPY --from=builder /app/DockerEntrypoint.sh /app/
 COPY --from=builder /app/x-ui.sh /usr/bin/x-ui
 COPY --from=builder /app/internal/web/translation /app/internal/web/translation
 
-# کپی کردن فایل اجرایی سایفون
+# کپی کردن فایل اجرایی سایفون اصلاح‌شده
 COPY --from=builder /go/bin/psiphon /usr/bin/psiphon-tunnel-core
 
-# کپی کردن اسکریپت جدید راه‌انداز
+# کپی کردن اسکریپت راه‌انداز
 COPY entrypoint.sh /app/entrypoint.sh
 
 # Configure fail2ban
@@ -81,7 +82,7 @@ RUN chmod +x \
   /app/entrypoint.sh \
   /app/x-ui \
   /usr/bin/x-ui \
-  /usr/bin/psiphon-tunnel-core || true
+  /usr/bin/psiphon-tunnel-core
 
 ENV XUI_IN_DOCKER="true"
 ENV XUI_MAIN_FOLDER="/app"
