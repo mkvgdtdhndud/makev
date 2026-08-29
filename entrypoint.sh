@@ -60,10 +60,10 @@ EOF
 done
 
 # ========================================================
-# 2. اجرای سایفون (دانمارک، ایتالیا، نروژ)
+# راه‌اندازی سایفون با سرورهای اولیه (Bootstrap Servers)
 # ========================================================
 if command -v psiphon-tunnel-core &> /dev/null; then
-    echo "[*] Launching Psiphon Engine..."
+    echo "[*] Launching Psiphon Engine with Embedded Server List..."
     BASE_DIR_PSI="/etc/psiphon"
     DATA_DIR_PSI="/var/lib/psiphon"
 
@@ -80,21 +80,27 @@ if command -v psiphon-tunnel-core &> /dev/null; then
 
         mkdir -p "$inst_dir"
 
-        cat <<EOF > "$conf_file"
+        # ترکیب کانفیگ اصلی ریپو با پورت و کشور درخواستی
+        if [ -f "/app/psiphon-src/config.json" ]; then
+            jq --arg region "$code" \
+               --argport "$port" \
+               --arg datadir "$inst_dir" \
+               '. + {EgressRegion: $region, LocalSocksProxyPort: ($port | tonumber), DataStoreDirectory: $datadir}' \
+               /app/psiphon-src/config.json > "$conf_file"
+        else
+            cat <<EOF > "$conf_file"
 {
   "EgressRegion": "$code",
   "LocalSocksProxyPort": $port,
   "DataStoreDirectory": "$inst_dir"
 }
 EOF
+        fi
 
         echo "[*] Launching Psiphon Node: $code on SOCKS5 Port $port..."
         psiphon-tunnel-core --config "$conf_file" >/dev/null 2>&1 &
     done
-else
-    echo "[!] Psiphon binary not found, skipping Psiphon launch."
 fi
-
 # ========================================================
 # 3. اجرای ورودی اصلی پنل
 # ========================================================
