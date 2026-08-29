@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-echo "[*] Starting Smart Tor Automation Engine for Railway (Alpine Environment)..."
+echo "[*] Starting Smart Tor Automation Engine for Railway (20 Countries)..."
 
 BASE_DIR="/etc/tor/t_sin_nodes"
 DATA_DIR="/var/lib/tor/t_sin_nodes"
 TOR_USER="tor"
 
-# لیست کشورها و پورت‌های خروجی Tor
+# لیست ۲۰ کشور مهم با اضافه شدن ایتالیا (IT)
 declare -A NODES=(
-    ["DE"]="9080" ["TR"]="9081" ["US"]="9082" 
-    ["FR"]="9083" ["NL"]="9084" ["GB"]="9085"
-    ["CA"]="9086" ["FI"]="9087" ["ES"]="9088"
+    ["DE"]="9080" ["TR"]="9081" ["US"]="9082" ["FR"]="9083" ["NL"]="9084"
+    ["GB"]="9085" ["CA"]="9086" ["FI"]="9087" ["ES"]="9088" ["IT"]="9089"
+    ["SE"]="9090" ["CH"]="9091" ["AT"]="9092" ["PL"]="9093" ["JP"]="9094"
+    ["SG"]="9095" ["AU"]="9096" ["BR"]="9097" ["NO"]="9098" ["DK"]="9099"
 )
 
 for code in "${!NODES[@]}"; do
@@ -35,7 +36,7 @@ EOF
     echo "[*] Launching Tor Node: $code on SOCKS5 Port $port..."
     su -s /bin/sh $TOR_USER -c "tor -f $conf_file" >/dev/null 2>&1 &
     
-    # تست و بررسی خودکار آی‌پی تمیز
+    # بررسی هوشمند آی‌پی تمیز
     (
         clean_attempts=0
         max_attempts=3
@@ -58,5 +59,5 @@ EOF
     ) &
 done
 
-# اجرای ورودی اصلی داکر پنل بدون ایجاد اختلال
+# اجرای ورودی اصلی پنل
 exec /app/DockerEntrypoint.sh "$@"
